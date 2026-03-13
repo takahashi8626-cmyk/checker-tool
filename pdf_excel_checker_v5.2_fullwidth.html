@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF-Excel 番号チェックツール v5.2（全角対応版）</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .input-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .input-box {
+            border: 3px solid #667eea;
+            border-radius: 15px;
+            padding: 30px;
+        }
+        
+        .input-box h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .input-box p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #cbd5e1;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+        
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+        
+        .upload-area.active {
+            border-color: #4ade80;
+            background: #f0fdf4;
+        }
+        
+        .upload-area input[type="file"] {
+            display: none;
+        }
+        
+        .file-name {
+            margin-top: 10px;
+            padding: 8px;
+            background: #e0e7ff;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #4338ca;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .hint {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 10px;
+            line-height: 1.6;
+        }
+        
+        .hint-example {
+            background: #f3f4f6;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        
+        .check-button {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 30px;
+        }
+        
+        .check-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .check-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .extracted-preview {
+            display: none;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f0fdf4;
+            border: 2px solid #22c55e;
+            border-radius: 12px;
+        }
+        
+        .extracted-preview h3 {
+            color: #16a34a;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .extracted-preview .numbers {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .extracted-preview .number-tag {
+            padding: 6px 12px;
+            background: white;
+            border: 1px solid #86efac;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #15803d;
+        }
+        
+        .results {
+            display: none;
+        }
+        
+        .result-summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .summary-card {
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .summary-card.total {
+            background: #e0e7ff;
+            border: 2px solid #667eea;
+        }
+        
+        .summary-card.required {
+            background: #fee2e2;
+            border: 2px solid #ef4444;
+        }
+        
+        .summary-card.not-required {
+            background: #dcfce7;
+            border: 2px solid #22c55e;
+        }
+        
+        .summary-card h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .summary-card .count {
+            font-size: 36px;
+            font-weight: bold;
+        }
+        
+        .summary-card.total .count {
+            color: #667eea;
+        }
+        
+        .summary-card.required .count {
+            color: #ef4444;
+        }
+        
+        .summary-card.not-required .count {
+            color: #22c55e;
+        }
+        
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .result-table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .result-table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .result-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .result-table tbody tr:hover {
+            background: #f9fafb;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        .status-required {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        
+        .status-not-required {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+        
+        .error-message {
+            display: none;
+            padding: 20px;
+            background: #fee2e2;
+            border-left: 4px solid #ef4444;
+            border-radius: 8px;
+            color: #991b1b;
+            margin-bottom: 20px;
+        }
+        
+        .error-message.show {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .input-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .result-summary {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 PDF-Excel 番号チェックツール v5.2</h1>
+            <p>全角対応版 - 全角数字も自動認識、時刻や名前が混在していてもOK</p>
+        </div>
+        
+        <div class="content">
+            <div class="error-message" id="errorMessage"></div>
+            
+            <div class="input-section">
+                <div class="input-box">
+                    <h3>📄 PDF番号（自由入力）</h3>
+                    <p>PDFの内容をそのままコピペしてOK！番号を自動抽出します</p>
+                    <textarea id="pdfNumbers" placeholder="自由に入力してください。例：&#10;16:00 山田太郎 31893&#10;リハ時間 30262&#10;０２２１７（全角もOK）&#10;患者ID: 31450&#10;&#10;時刻（16:00など）は除外され、3〜6桁の番号だけが自動抽出されます"></textarea>
+                    <div class="hint">
+                        💡 <strong>何でも入力OK！</strong> 全角数字・時刻・名前・説明文が混在していても自動で番号だけを抽出します
+                    </div>
+                    <div class="hint-example">
+                        <strong>入力例：</strong><br>
+                        16:00 山田太郎 31893<br>
+                        リハ時間 ３０２６２（全角）<br>
+                        患者番号：０２２１７<br>
+                        → 自動抽出: 31893, 30262, 2217
+                    </div>
+                </div>
+                
+                <div class="input-box">
+                    <h3>📊 Excel番号リスト（A列）</h3>
+                    <p>Excelファイルをアップロードまたは番号を入力</p>
+                    
+                    <div class="upload-area" id="excelBox" onclick="document.getElementById('excelFile').click()">
+                        <div style="font-size: 32px; margin-bottom: 10px;">📁</div>
+                        <div style="color: #667eea; font-weight: 600;">Excelをアップロード</div>
+                        <input type="file" id="excelFile" accept=".xlsx,.xls" onchange="handleExcelUpload(event)">
+                        <div class="file-name" id="excelFileName" style="display:none;"></div>
+                    </div>
+                    
+                    <div style="text-align: center; margin: 15px 0; color: #9ca3af;">または</div>
+                    
+                    <textarea id="excelNumbers" placeholder="番号を1行に1つずつ入力してください。例:&#10;1000&#10;2000&#10;３０００（全角もOK）"></textarea>
+                    <div class="hint">💡 Excelアップロードまたは直接入力（全角・半角どちらもOK）</div>
+                </div>
+            </div>
+            
+            <div class="extracted-preview" id="extractedPreview">
+                <h3>✓ 抽出された番号（プレビュー）</h3>
+                <div class="numbers" id="extractedNumbers"></div>
+            </div>
+            
+            <button class="check-button" id="checkButton" onclick="processData()">
+                🔍 番号チェックを実行
+            </button>
+            
+            <div class="results" id="resultsSection">
+                <h2 style="margin-bottom: 20px; color: #667eea;">判定結果</h2>
+                
+                <div class="result-summary">
+                    <div class="summary-card total">
+                        <h3>PDF抽出数</h3>
+                        <div class="count" id="totalCount">0</div>
+                    </div>
+                    <div class="summary-card required">
+                        <h3>計画書必要</h3>
+                        <div class="count" id="requiredCount">0</div>
+                    </div>
+                    <div class="summary-card not-required">
+                        <h3>計画書不必要</h3>
+                        <div class="count" id="notRequiredCount">0</div>
+                    </div>
+                </div>
+                
+                <table class="result-table">
+                    <thead>
+                        <tr>
+                            <th>PDF番号（元）</th>
+                            <th>正規化後</th>
+                            <th>判定結果</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let excelFile = null;
+        let extractedPdfNumbers = [];
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+            setTimeout(() => errorDiv.classList.remove('show'), 5000);
+        }
+
+        function toHalfWidth(str) {
+            // 全角数字を半角に変換
+            return str.replace(/[０-９]/g, function(s) {
+                return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+            });
+        }
+
+        function normalizeNumber(str) {
+            // 全角を半角に変換
+            let normalized = toHalfWidth(str);
+            // 数字以外を削除
+            normalized = normalized.replace(/[^0-9]/g, '').trim();
+            // 先頭のゼロ削除
+            normalized = normalized.replace(/^0+/, '') || '0';
+            return normalized;
+        }
+
+        function isTimeFormat(str) {
+            // まず半角に変換
+            const halfWidth = toHalfWidth(str);
+            
+            // 時刻形式を検出: HH:MM, H:MM, HH:M, H:M
+            const timePattern = /^\d{1,2}:\d{1,2}$/;
+            if (!timePattern.test(halfWidth)) return false;
+            
+            const parts = halfWidth.split(':');
+            const hours = parseInt(parts[0]);
+            const minutes = parseInt(parts[1]);
+            
+            // 有効な時刻範囲: 0-23時, 0-59分
+            return hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59;
+        }
+
+        function extractNumbers(text) {
+            if (!text || text.trim() === '') return [];
+            
+            // まず全角を半角に変換
+            const halfWidthText = toHalfWidth(text);
+            
+            console.log('Original text:', text);
+            console.log('Half-width text:', halfWidthText);
+            
+            // すべての連続する数字を抽出（コロン付きも含む）
+            // 全角・半角両方のパターンにマッチ
+            const allMatches = halfWidthText.match(/\d+:?\d*/g) || [];
+            
+            console.log('All matches:', allMatches);
+            
+            const validNumbers = [];
+            
+            for (const match of allMatches) {
+                console.log(`Processing: "${match}"`);
+                
+                // 時刻形式（HH:MMなど）をスキップ
+                if (match.includes(':') && isTimeFormat(match)) {
+                    console.log(`  -> 時刻をスキップ: ${match}`);
+                    continue;
+                }
+                
+                // コロンを削除
+                const cleaned = match.replace(':', '');
+                
+                // 数字のみ抽出
+                const digits = cleaned.replace(/[^0-9]/g, '');
+                
+                console.log(`  -> Digits: "${digits}" (length: ${digits.length})`);
+                
+                // 3桁以上6桁以下の番号のみ有効とする
+                if (digits.length >= 3 && digits.length <= 6) {
+                    const normalized = normalizeNumber(digits);
+                    if (normalized !== '0' && normalized !== '') {
+                        validNumbers.push(normalized);
+                        console.log(`  -> ✓ Valid: ${normalized}`);
+                    }
+                } else {
+                    console.log(`  -> ✗ Invalid length: ${digits.length}`);
+                }
+            }
+            
+            // 重複削除
+            const unique = [...new Set(validNumbers)];
+            console.log('Final extracted numbers:', unique);
+            return unique;
+        }
+
+        function updatePreview() {
+            const pdfText = document.getElementById('pdfNumbers').value;
+            const numbers = extractNumbers(pdfText);
+            
+            if (numbers.length > 0) {
+                extractedPdfNumbers = numbers;
+                
+                const previewDiv = document.getElementById('extractedPreview');
+                const numbersDiv = document.getElementById('extractedNumbers');
+                
+                numbersDiv.innerHTML = '';
+                numbers.forEach(num => {
+                    const tag = document.createElement('span');
+                    tag.className = 'number-tag';
+                    tag.textContent = num;
+                    numbersDiv.appendChild(tag);
+                });
+                
+                previewDiv.style.display = 'block';
+            } else {
+                document.getElementById('extractedPreview').style.display = 'none';
+            }
+        }
+
+        // リアルタイムプレビュー
+        document.getElementById('pdfNumbers').addEventListener('input', updatePreview);
+
+        async function handleExcelUpload(event) {
+            excelFile = event.target.files[0];
+            if (excelFile) {
+                try {
+                    const numbers = await readExcelFile();
+                    document.getElementById('excelNumbers').value = numbers.join('\n');
+                    document.getElementById('excelFileName').textContent = excelFile.name;
+                    document.getElementById('excelFileName').style.display = 'block';
+                    document.getElementById('excelBox').classList.add('active');
+                } catch (error) {
+                    showError('Excelの読み込みに失敗しました: ' + error.message);
+                }
+            }
+        }
+
+        async function readExcelFile() {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                        
+                        const numbers = jsonData
+                            .map(row => row[0])
+                            .filter(cell => cell != null && cell !== '')
+                            .map(cell => normalizeNumber(String(cell)))
+                            .filter(num => num !== '0' && num !== '');
+                        
+                        resolve(numbers);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(excelFile);
+            });
+        }
+
+        function processData() {
+            try {
+                // PDF番号を取得（自動抽出）
+                const pdfText = document.getElementById('pdfNumbers').value;
+                const pdfNumbers = extractNumbers(pdfText);
+                
+                // Excel番号を取得
+                const excelText = document.getElementById('excelNumbers').value;
+                const excelNumbers = extractNumbers(excelText);
+                
+                console.log('PDF Numbers:', pdfNumbers);
+                console.log('Excel Numbers:', excelNumbers);
+                
+                // バリデーション
+                if (pdfNumbers.length === 0) {
+                    showError('PDF番号を入力してください（3〜6桁の数字が必要です）');
+                    return;
+                }
+                
+                if (excelNumbers.length === 0) {
+                    showError('Excel番号を入力またはアップロードしてください');
+                    return;
+                }
+                
+                // 判定処理
+                const results = pdfNumbers.map(number => {
+                    const exists = excelNumbers.includes(number);
+                    return {
+                        originalNumber: number,
+                        normalizedNumber: number,
+                        status: exists ? '計画書不必要' : '計画書必要',
+                        required: !exists
+                    };
+                });
+                
+                displayResults(results);
+                
+            } catch (error) {
+                console.error('処理エラー:', error);
+                showError('処理中にエラーが発生しました: ' + error.message);
+            }
+        }
+
+        function displayResults(results) {
+            const totalCount = results.length;
+            const requiredCount = results.filter(r => r.required).length;
+            const notRequiredCount = results.filter(r => !r.required).length;
+            
+            document.getElementById('totalCount').textContent = totalCount;
+            document.getElementById('requiredCount').textContent = requiredCount;
+            document.getElementById('notRequiredCount').textContent = notRequiredCount;
+            
+            const tbody = document.getElementById('resultTableBody');
+            tbody.innerHTML = '';
+            
+            results.forEach(result => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${result.originalNumber}</td>
+                    <td>${result.normalizedNumber}</td>
+                    <td><span class="status-badge ${result.required ? 'status-required' : 'status-not-required'}">${result.status}</span></td>
+                `;
+            });
+            
+            document.getElementById('resultsSection').style.display = 'block';
+            document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
